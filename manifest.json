@@ -1,0 +1,14 @@
+{
+  "manifest_version": 2,
+  "name": "ChatGPT Enhancer",
+  "version": "1.0",
+  "description": "Enhances the ChatGPT experience.",
+  "permissions": ["activeTab", "storage"],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "browser_action": {
+    "default_popup": "popup.html"
+  }
+}
