@@ -19,7 +19,7 @@ const handleAudioStop = (blob) => {
         console.log(base64String); // Logs base64 encoded string
 
         const formData = { audio: base64String };
-        fetch('http://localhost:3000/upload', {
+        fetch('http://localhost:3020/upload', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json' // Set the Content-Type header
