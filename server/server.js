@@ -1,48 +1,79 @@
-// server.js
 const express = require('express');
-const multer = require('multer');
 const fs = require('fs');
+const path = require('path');
 const speech = require('@google-cloud/speech');
 const cors = require('cors');
 
 const app = express();
-const upload = multer({ dest: 'uploads/' });
 
-// Replace 'YOUR_PROJECT_ID' with your Google Cloud project ID
+// Замініть 'YOUR_PROJECT_ID' вашим Google Cloud project ID
 const client = new speech.SpeechClient({ projectId: 'chrvspeech', keyFilename: './chrvspeech-1c4535b115f0.json' });
 
-app.use(cors()); // Enable CORS for all requests
+app.use(cors());
+app.use(express.json({ limit: '50mb' })); // Парсити JSON тіла
 
-app.post('/upload', upload.single('audio'), (req, res) => {
-    console.log('test', req.file)
-    const file = req.file;
+app.post('/upload', async (req, res) => {
+    const base64Audio = req.body.audio;
 
-    if (!file) {
+    if (!base64Audio) {
         return res.status(400).send('No audio file uploaded.');
     }
 
-    const audioBytes = fs.readFileSync(file.path).toString('base64');
-    const audio = { content: audioBytes };
+    try {
+        // Декодуйте base64 рядок до бінарних даних
+        const buffer = Buffer.from(base64Audio, 'base64');
 
-    const config = {
-        encoding: 'audio/ogg',
-        languageCode: 'en-US',
-    };
-    console.log('audioBytes', audioBytes);
-    const request = { audio: audio, config: config };
+        // Прочитайте файл як base64 для Google Cloud Speech-to-Text
+        const audioBytes = buffer.toString('base64');
+        const audio = { content: audioBytes };
 
-    client.recognize(request)
-        .then(response => {
-            console.log(response)
-            const transcription = response[0].results
-                .map(result => result.alternatives[0].transcript)
-                .join('\n');
-            res.send(transcription);
-        })
-        .catch(err => {
-            console.error('ERROR:', err);
-            res.status(500).send('Error processing speech-to-text.');
-        });
+        const config = {
+            encoding: 'WEBM_OPUS',
+            sampleRateHertz: 48000,
+            languageCode: 'en-US',
+        };
+
+        const request = { audio: audio, config: config };
+
+        // Виклик Google Cloud Speech-to-Text API
+        const [response] = await client.recognize(request);
+        const transcription = response.results
+            .map(result => result.alternatives[0].transcript)
+            .join('\n');
+        res.json({ transcription });
+    } catch (err) {
+        console.error('ERROR:', err);
+        res.status(500).send('Error processing speech-to-text.');
+    }
+});
+
+app.get('/process-file', async (req, res) => {
+    const filePath = path.join(__dirname, '../harvard_mono.wav'); // Вкажіть свій файл
+
+    try {
+        // Зчитайте файл з файлової системи
+        const audioFile = fs.readFileSync(filePath);
+        const audioBytes = audioFile.toString('base64');
+        const audio = { content: audioBytes };
+
+        const config = {
+            encoding: 'LINEAR16', // Замініть на правильне кодування файлу
+            sampleRateHertz: 44100, // Замініть на правильну частоту дискретизації файлу
+            languageCode: 'en-US',
+        };
+
+        const request = { audio: audio, config: config };
+
+        // Виклик Google Cloud Speech-to-Text API
+        const [response] = await client.recognize(request);
+        const transcription = response.results
+            .map(result => result.alternatives[0].transcript)
+            .join('\n');
+        res.json({ transcription });
+    } catch (err) {
+        console.error('ERROR:', err);
+        res.status(500).send('Error processing speech-to-text.');
+    }
 });
 
 const PORT = process.env.PORT || 3000;

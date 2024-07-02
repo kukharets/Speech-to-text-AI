@@ -4,48 +4,57 @@ let recordedChunks = [];
 
 const recordButton = document.getElementById('recordButton');
 const playButton = document.getElementById('playButton');
-
-const handleAudioStop = (recordedAudioBlob) => {
-    const formData = new FormData();
-    formData.append('audio', recordedAudioBlob, 'recording.webm');
-
-    fetch('http://localhost:3000/upload', {
-        method: 'POST',
-        body: formData
-    })
-        .then(response => response.text())
-        .then(transcription => {
-            console.log('Transcription:', transcription);
-            // Handle transcription as needed
-        })
-        .catch(error => console.error('Error:', error));
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            resolve(reader.result.split(',')[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
 }
+const handleAudioStop = (blob) => {
+    blobToBase64(blob).then(base64String => {
+        console.log(base64String); // Logs base64 encoded string
+
+        const formData = { audio: base64String };
+        fetch('http://localhost:3000/upload', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json' // Set the Content-Type header
+            },
+            body: JSON.stringify(formData)
+        })
+            .then(response => response.json())
+            .then(transcription => {
+                console.log('Transcription:', transcription);
+                // Handle transcription as needed
+            })
+            .catch(error => console.error('Error:', error));
+    });
+};
 recordButton.addEventListener('click', async () => {
-    console.log('op')
     if (isRecording) {
-        // Stop recording
         mediaRecorder.stop();
         recordButton.textContent = 'Start Recording';
         playButton.disabled = false;
         isRecording = false;
     } else {
         try {
-            // Request permission and start recording
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm; codecs=opus' });
             mediaRecorder.ondataavailable = event => {
                 if (event.data.size > 0) {
                     recordedChunks.push(event.data);
                 }
             };
             mediaRecorder.onstop = () => {
-                const blob = new Blob(recordedChunks, {
-                    type: 'audio/ogg'
-                });
-                handleAudioStop(blob)
+                const blob = new Blob(recordedChunks, { type: 'audio/webm; codecs=opus' });
                 recordedChunks = [];
                 const audioURL = URL.createObjectURL(blob);
                 playButton.dataset.audioUrl = audioURL;
+                handleAudioStop(blob);
             };
             mediaRecorder.start();
             recordButton.textContent = 'Stop Recording';
