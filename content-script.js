@@ -13,7 +13,7 @@ function translate(text = '') {
     const targetLang = isCyrillic ? 'EN-US' : 'UK'
     console.log('trans', text, isCyrillic)
     return fetch("http://127.0.0.1:5000/login?text=" + text + '&lang=' + targetLang, {method: 'GET',headers: {
-            'DeepL-Auth-Key': 'fbc4dedc-09ee-4207-97f9-21c25806943e:fx',
+            'DeepL-Auth-Key': process.env.DEEPL_KEY,
         },})
         .then((response) => response.json())
         .then((json) => json.success);

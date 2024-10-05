@@ -7,7 +7,7 @@ const cors = require('cors');
 const app = express();
 
 // Замініть 'YOUR_PROJECT_ID' вашим Google Cloud project ID
-const client = new speech.SpeechClient({ projectId: 'chrvspeech', keyFilename: './chrvspeech-1c4535b115f0.json' });
+const client = new speech.SpeechClient({ projectId: 'chrvspeech', keyFilename: process.env.GOOGLE_KEY_FILE_DIR });
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Парсити JSON тіла
